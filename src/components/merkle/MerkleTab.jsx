@@ -41,31 +41,15 @@ export default function MerkleTab({ lang = 'vi' }) {
       <MerkleTheory lang={lang} />
 
       {/* ── SECTION 2: Visualization ── */}
-      <div style={{
-        marginTop: 24,
-        display: 'flex',
-        gap: 24,
-        alignItems: 'stretch',
-        flexWrap: 'nowrap',
-      }}>
-
-        {/* LEFT: Inputs — fixed 320px wide */}
-        <div style={{
-          width: 320,
-          minWidth: 320,
-          flexShrink: 0,
-          height: 680,
-        }}>
+      <div className="merkle-dashboard">
+        
+        {/* LEFT: Inputs */}
+        <div className="merkle-sidebar">
           <MerkleInputPanel onGenerate={fetchMerkleTree} loading={loading} lang={lang} />
         </div>
 
-        {/* RIGHT: Canvas — flex-grow */}
-        <div style={{
-          flex: 1,
-          minWidth: 0,
-          height: 680,
-          position: 'relative',
-        }}>
+        {/* RIGHT: Canvas */}
+        <div className="merkle-canvas-area">
           <MerkleVisualization treeData={treeData} loading={loading} lang={lang} />
 
           {/* Error overlay */}

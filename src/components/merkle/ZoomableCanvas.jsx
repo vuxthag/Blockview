@@ -68,7 +68,9 @@ export default function ZoomableCanvas({ children, hasContent, lang = 'vi' }) {
         display: 'flex',
         justifyContent: 'center',
         minWidth: '100%',
+        width: 'max-content',
         minHeight: '100%',
+        height: 'max-content',
         padding: '32px 64px 48px',
       }}>
         <div

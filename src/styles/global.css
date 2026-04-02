@@ -1017,5 +1017,47 @@ textarea.inp { resize: vertical; min-height: 72px; line-height: 1.7; }
    ═══════════════════════════════════════════════════════════════ */
 .nav-toggles-container { display: flex; gap: 6px; margin-left: 8px; }
 .nav-toggle-btn { padding: 5px 10px; font-size: 14px; min-width: 0; border-radius: 8px; }
+.nav-toggles-container { display: flex; gap: 6px; margin-left: 8px; }
+.nav-toggle-btn { padding: 5px 10px; font-size: 14px; min-width: 0; border-radius: 8px; }
 .nav-mobile-toggles { display: flex; gap: 8px; padding: 8px 16px; }
 .nav-mobile-toggle-btn { font-size: 12px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MERKLE DASHBOARD RESPONSIVE STYLES
+   ═══════════════════════════════════════════════════════════════ */
+.merkle-dashboard {
+  margin-top: 24px;
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.merkle-sidebar {
+  width: 320px;
+  min-width: 320px;
+  flex-shrink: 0;
+  height: 680px;
+}
+
+.merkle-canvas-area {
+  flex: 1;
+  min-width: 0;
+  height: 680px;
+  position: relative;
+}
+
+@media (max-width: 900px) {
+  .merkle-dashboard {
+    flex-direction: column;
+  }
+  .merkle-sidebar {
+    width: 100%;
+    min-width: 100%;
+    height: auto;
+    min-height: 400px;
+  }
+  .merkle-canvas-area {
+    width: 100%;
+    min-height: 680px;
+  }
+}
