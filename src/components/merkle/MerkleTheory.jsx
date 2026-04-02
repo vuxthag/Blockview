@@ -1,82 +1,87 @@
 import React from 'react';
 import { LANG } from '../../data/lang.js';
 
+/**
+ * MerkleTheory — fully theme-aware via CSS variables.
+ * All hardcoded dark colors removed and replaced with var(--*) tokens.
+ */
 export default function MerkleTheory({ lang = 'vi' }) {
   const t = LANG[lang].merkle;
 
   const nodeItems = [
-    { icon: '🍃', color: '#22d3ee', label: t.leafNode,   text: t.leafNodeDesc },
+    { icon: '🍃', color: '#06b6d4', label: t.leafNode,   text: t.leafNodeDesc },
     { icon: '🔗', color: '#3b82f6', label: t.parentNode, text: t.parentNodeDesc },
     { icon: '👑', color: '#a855f7', label: t.merkleRoot, text: t.merkleRootDesc },
   ];
 
   const legendItems = [
-    { color: '#8b5cf6', label: t.legendRoot },
+    { color: '#a855f7', label: t.legendRoot },
     { color: '#3b82f6', label: t.legendInternal },
-    { color: '#22d3ee', label: t.legendLeaf },
+    { color: '#06b6d4', label: t.legendLeaf },
   ];
 
   return (
     <div style={{
       width: '100%',
-      background: 'linear-gradient(135deg, rgba(139,92,246,0.09) 0%, rgba(59,130,246,0.07) 50%, rgba(15,23,42,0.6) 100%)',
-      border: '1px solid rgba(139,92,246,0.25)',
+      background: 'var(--bg1)',
+      border: '1px solid var(--border)',
       borderRadius: 20,
       padding: '28px 32px',
-      backdropFilter: 'blur(16px)',
-      boxShadow: '0 0 0 1px rgba(139,92,246,0.08), 0 8px 48px rgba(0,0,0,0.35), 0 0 60px rgba(139,92,246,0.06)',
+      boxShadow: 'var(--shadow)',
       position: 'relative',
       overflow: 'hidden',
     }}>
-      {/* Ambient glow blobs */}
+      {/* Decorative ambient blobs */}
       <div style={{
         position: 'absolute', top: -60, left: -60,
-        width: 180, height: 180,
-        background: 'radial-gradient(circle, rgba(139,92,246,0.18) 0%, transparent 70%)',
+        width: 200, height: 200,
+        background: 'radial-gradient(circle, rgba(168,85,247,0.12) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
       <div style={{
         position: 'absolute', bottom: -40, right: -40,
-        width: 140, height: 140,
-        background: 'radial-gradient(circle, rgba(59,130,246,0.14) 0%, transparent 70%)',
+        width: 150, height: 150,
+        background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22, position: 'relative' }}>
         <div style={{
-          width: 36, height: 36, borderRadius: 12,
-          background: 'linear-gradient(135deg,#7c3aed,#3b82f6)',
+          width: 38, height: 38, borderRadius: 12,
+          background: 'linear-gradient(135deg, #7c3aed, #3b82f6)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 18, flexShrink: 0,
-          boxShadow: '0 4px 16px rgba(124,58,237,0.4)',
+          fontSize: 20, flexShrink: 0,
+          boxShadow: '0 4px 16px rgba(124,58,237,0.35)',
         }}>🌳</div>
         <div>
-          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.3px' }}>
+          <h3 style={{
+            margin: 0, fontSize: 17, fontWeight: 800,
+            color: 'var(--text)', letterSpacing: '-0.3px',
+          }}>
             {t.theoryTitle}
           </h3>
-          <p style={{ margin: 0, fontSize: 11, color: '#64748b', marginTop: 2 }}>
+          <p style={{ margin: 0, fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
             {t.theorySubtitle}
           </p>
         </div>
       </div>
 
-      {/* Content: Text + Diagram side by side */}
-      <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      {/* Content grid */}
+      <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', flexWrap: 'wrap', position: 'relative' }}>
 
-        {/* Left: Description */}
+        {/* Left: Description + item list */}
         <div style={{ flex: '1 1 300px', minWidth: 260 }}>
-          <p style={{ margin: '0 0 16px', fontSize: 13.5, color: '#94a3b8', lineHeight: 1.8 }}>
-            {/* Highlight "Merkle Tree" / "Cây Merkle" with purple color */}
+          <p style={{ margin: '0 0 18px', fontSize: 13.5, color: 'var(--text2)', lineHeight: 1.8 }}>
             {(() => {
-              const desc = t.theoryDescPlain;
+              const desc      = t.theoryDescPlain;
               const highlight = lang === 'vi' ? 'Cây Merkle' : 'Merkle Tree';
-              const parts = desc.split(highlight);
+              const parts     = desc.split(highlight);
               return parts.map((part, i) => (
                 <React.Fragment key={i}>
                   {part}
                   {i < parts.length - 1 && (
-                    <span style={{ color: '#c084fc', fontWeight: 600 }}>{highlight}</span>
+                    <span style={{ color: '#a855f7', fontWeight: 600 }}>{highlight}</span>
                   )}
                 </React.Fragment>
               ));
@@ -87,16 +92,21 @@ export default function MerkleTheory({ lang = 'vi' }) {
             {nodeItems.map((item, i) => (
               <li key={i} style={{
                 display: 'flex', gap: 12, alignItems: 'flex-start',
-                background: 'rgba(15,23,42,0.45)',
+                background: 'var(--bg2)',
                 borderRadius: 10, padding: '10px 14px',
-                border: `1px solid ${item.color}22`,
+                border: `1px solid ${item.color}33`,
+                transition: 'background 0.2s',
               }}>
-                <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+                <span style={{ fontSize: 17, flexShrink: 0, marginTop: 1 }}>{item.icon}</span>
                 <div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: item.color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  <span style={{
+                    fontSize: 11, fontWeight: 700,
+                    color: item.color,
+                    textTransform: 'uppercase', letterSpacing: '0.08em',
+                  }}>
                     {item.label}
                   </span>
-                  <p style={{ margin: '2px 0 0', fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text2)', lineHeight: 1.55 }}>
                     {item.text}
                   </p>
                 </div>
@@ -105,49 +115,48 @@ export default function MerkleTheory({ lang = 'vi' }) {
           </ul>
         </div>
 
-        {/* Right: Static mini tree diagram */}
+        {/* Right: Mini tree diagram */}
         <div style={{
           flex: '0 0 auto',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: 0,
-          padding: '16px 20px',
-          background: 'rgba(2,6,23,0.55)',
+          padding: '18px 22px',
+          background: 'var(--bg2)',
           borderRadius: 16,
-          border: '1px solid rgba(51,65,85,0.6)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
+          border: '1px solid var(--border)',
         }}>
-          {/* Row 1: Root */}
-          <MiniNode label={t.merkleRoot} color="#8b5cf6" />
+          {/* Root */}
+          <MiniNode label={t.merkleRoot} color="#a855f7" />
           <MiniLines count={2} />
 
-          {/* Row 2: Intermediate */}
+          {/* Intermediate level */}
           <div style={{ display: 'flex', gap: 20 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <MiniNode label="Hash(A+B)" color="#3b82f6" small />
               <MiniLines count={2} />
               <div style={{ display: 'flex', gap: 8 }}>
-                <MiniNode label="Tx A" color="#22d3ee" tiny />
-                <MiniNode label="Tx B" color="#22d3ee" tiny />
+                <MiniNode label="Tx A" color="#06b6d4" tiny />
+                <MiniNode label="Tx B" color="#06b6d4" tiny />
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <MiniNode label="Hash(C+D)" color="#3b82f6" small />
               <MiniLines count={2} />
               <div style={{ display: 'flex', gap: 8 }}>
-                <MiniNode label="Tx C" color="#22d3ee" tiny />
-                <MiniNode label="Tx D" color="#22d3ee" tiny />
+                <MiniNode label="Tx C" color="#06b6d4" tiny />
+                <MiniNode label="Tx D" color="#06b6d4" tiny />
               </div>
             </div>
           </div>
 
           {/* Legend */}
-          <div style={{ display: 'flex', gap: 12, marginTop: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 14, marginTop: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
             {legendItems.map((l, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: l.color, boxShadow: `0 0 6px ${l.color}` }} />
-                <span style={{ fontSize: 10, color: '#64748b' }}>{l.label}</span>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: l.color, boxShadow: `0 0 6px ${l.color}88`, flexShrink: 0 }} />
+                <span style={{ fontSize: 10, color: 'var(--text3)' }}>{l.label}</span>
               </div>
             ))}
           </div>
@@ -157,6 +166,7 @@ export default function MerkleTheory({ lang = 'vi' }) {
   );
 }
 
+// ── Mini tree helpers ──────────────────────────────────────────────────────
 function MiniNode({ label, color, small, tiny }) {
   const size = tiny
     ? { px: '5px 10px', fs: 9, br: 6 }
@@ -167,15 +177,15 @@ function MiniNode({ label, color, small, tiny }) {
     <div style={{
       padding: size.px,
       borderRadius: size.br,
-      border: `1px solid ${color}66`,
-      background: `${color}20`,
+      border: `1px solid ${color}55`,
+      background: `${color}18`,
       color: color,
       fontSize: size.fs,
       fontFamily: 'monospace',
       whiteSpace: 'nowrap',
       fontWeight: 700,
       letterSpacing: '0.04em',
-      boxShadow: `0 0 10px ${color}18`,
+      boxShadow: `0 0 10px ${color}20`,
     }}>
       {label}
     </div>
@@ -184,11 +194,11 @@ function MiniNode({ label, color, small, tiny }) {
 
 function MiniLines({ count = 1 }) {
   return (
-    <div style={{ display: 'flex', gap: count === 2 ? 28 : 0, justifyContent: 'center' }}>
+    <div style={{ display: 'flex', gap: count === 2 ? 32 : 0, justifyContent: 'center' }}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} style={{
-          width: 1, height: 16,
-          background: 'linear-gradient(to bottom, rgba(100,116,139,0.6), rgba(100,116,139,0.2))',
+          width: 1.5, height: 18,
+          background: 'linear-gradient(to bottom, var(--border), transparent)',
           flexShrink: 0,
         }} />
       ))}

@@ -1,64 +1,34 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { LANG } from '../data/lang.js';
 import { API } from '../utils/crypto.js';
+import Button from '../components/ui/Button.jsx';
+import Card from '../components/ui/Card.jsx';
+import Badge from '../components/ui/Badge.jsx';
+import Input from '../components/ui/Input.jsx';
+import '../styles/mining.css';
 
 // ── Cyberpunk Block Card ─────────────────────────────────────────────────────
 function BlockCard({ block, index, isGenesis, onTamper, onRestore, t }) {
   const isValid = block.blockValid;
   const isTampered = block.tampered;
-
-  const borderColor = isGenesis
-    ? 'rgba(192,132,252,0.6)'
-    : isValid ? 'rgba(56,189,248,0.5)' : 'rgba(251,113,133,0.7)';
-  const glowColor = isGenesis
-    ? 'rgba(192,132,252,0.18)'
-    : isValid ? 'rgba(56,189,248,0.15)' : 'rgba(251,113,133,0.22)';
+  
+  const statusClass = isGenesis ? 'genesis' : isValid ? 'valid' : 'invalid';
 
   return (
-    <div className="anim-border" style={{
+    <div className={`anim-border block-card ${statusClass}`} style={{
       '--glow-color': isGenesis ? 'var(--cyan)' : isValid ? 'var(--green)' : 'var(--red)',
-      minWidth: 220, flexShrink: 0,
-      background: 'var(--bg-glass)',
-      border: `1px solid ${borderColor}`,
-      borderRadius: 18,
-      padding: 20,
-      boxShadow: `0 0 24px ${glowColor}, inset 0 1px 0 rgba(255,255,255,0.04)`,
-      backdropFilter: 'blur(12px)',
-      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-      position: 'relative',
-      overflow: 'hidden',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-6px) scale(1.02)'; e.currentTarget.style.boxShadow = `0 12px 32px ${glowColor}, inset 0 1px 0 rgba(255,255,255,0.08)`; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = `0 0 24px ${glowColor}, inset 0 1px 0 rgba(255,255,255,0.04)`; }}>
+    }}>
       {/* Top accent line */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-        background: isGenesis
-          ? 'linear-gradient(90deg, var(--cyan), var(--cyan2))'
-          : isValid ? 'linear-gradient(90deg, var(--green), var(--blue))'
-          : 'linear-gradient(90deg, var(--red), #f43f5e)',
-      }} />
+      <div className={`block-accent-line ${statusClass}`} />
       {/* Shimmer overlay */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 60%)', pointerEvents: 'none' }} />
+      <div className="block-shimmer-overlay" />
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <span style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',
-          color: isGenesis ? 'var(--cyan)' : isValid ? 'var(--green)' : 'var(--red)',
-          padding: '4px 12px', borderRadius: 99,
-          background: isGenesis ? 'rgba(192,132,252,0.1)' : isValid ? 'rgba(56,189,248,0.1)' : 'rgba(251,113,133,0.1)',
-          border: `1px solid ${isGenesis ? 'rgba(192,132,252,0.3)' : isValid ? 'rgba(56,189,248,0.3)' : 'rgba(251,113,133,0.4)'}`,
-          boxShadow: `0 0 10px ${isGenesis ? 'rgba(192,132,252,0.1)' : isValid ? 'rgba(56,189,248,0.1)' : 'rgba(251,113,133,0.15)'}`,
-        }}>
+      <div className="block-header">
+        <span className={`block-badge ${statusClass}`}>
           {isGenesis ? t.genesis : `${t.blockStr} #${block.index}`}
         </span>
-        <div style={{
-          width: 10, height: 10, borderRadius: '50%',
-          background: isGenesis ? 'var(--cyan)' : isValid ? 'var(--green)' : 'var(--red)',
-          boxShadow: `0 0 10px ${isGenesis ? 'rgba(192,132,252,0.9)' : isValid ? 'rgba(56,189,248,0.9)' : 'rgba(251,113,133,0.9)'}`,
-          animation: isTampered ? 'dotPulse 0.5s ease-in-out infinite alternate' : 'none',
-        }} />
+        <div className={`block-status-dot ${statusClass} ${isTampered ? 'tampered' : ''}`} />
       </div>
 
       {/* Fields */}
@@ -69,33 +39,19 @@ function BlockCard({ block, index, isGenesis, onTamper, onRestore, t }) {
         { label: t.hashStr, value: block.hash.slice(0, 10) + '...', color: isValid ? 'var(--green)' : 'var(--red)' },
         { label: t.prevHashStr, value: block.previousHash.slice(0, 10) + '...', color: 'var(--text3)' },
       ].map(({ label, value, color }) => (
-        <div key={label} style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: 3 }}>{label}</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color, padding: '5px 8px', background: 'var(--bg-input)', borderRadius: 6, wordBreak: 'break-all' }}>{value}</div>
+        <div key={label} className="block-field">
+          <div className="block-field-label">{label}</div>
+          <div className="block-field-value" style={{ color }}>{value}</div>
         </div>
       ))}
 
       {/* Action Buttons */}
       {!isGenesis && (
-        <div style={{ display: 'flex', gap: 6, marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
+        <div className="block-actions">
           {!isTampered ? (
-            <button onClick={() => onTamper(block.index)} style={{
-              flex: 1, padding: '8px 0', fontSize: 11, fontWeight: 700, fontFamily: 'var(--sans)', letterSpacing: '0.5px',
-              background: 'rgba(251,113,133,0.1)', border: '1px solid rgba(251,113,133,0.4)',
-              color: 'var(--red)', borderRadius: 8, cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(251,113,133,0.25)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(251,113,133,0.2)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(251,113,133,0.1)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-            >{t.tamperBtn}</button>
+            <button onClick={() => onTamper(block.index)} className="block-btn tamper">{t.tamperBtn}</button>
           ) : (
-            <button onClick={() => onRestore(block.index)} style={{
-              flex: 1, padding: '8px 0', fontSize: 11, fontWeight: 700, fontFamily: 'var(--sans)', letterSpacing: '0.5px',
-              background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.4)',
-              color: 'var(--green)', borderRadius: 8, cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(56,189,248,0.25)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(56,189,248,0.2)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(56,189,248,0.1)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-            >{t.restoreBtn}</button>
+            <button onClick={() => onRestore(block.index)} className="block-btn restore">{t.restoreBtn}</button>
           )}
         </div>
       )}
@@ -106,7 +62,7 @@ function BlockCard({ block, index, isGenesis, onTamper, onRestore, t }) {
 // ── Chain Connector Arrow ────────────────────────────────────────────────────
 function ChainArrow({ valid }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', padding: '0 4px', flexShrink: 0 }}>
+    <div className="chain-arrow-box">
       <svg width="32" height="16" viewBox="0 0 32 16" fill="none">
         <line x1="0" y1="8" x2="24" y2="8" stroke={valid ? 'var(--green)' : 'var(--red)'} strokeWidth="2" strokeDasharray={valid ? '0' : '4 2'} />
         <polygon points="24,4 32,8 24,12" fill={valid ? 'var(--green)' : 'var(--red)'} />
@@ -260,16 +216,10 @@ export default function MiningView({ lang = "vi" }) {
     <div className="page">
 
       {/* ─── Tab Bar ─── */}
-      <div style={{ position: 'sticky', top: 60, zIndex: 10, background: 'var(--nav-bg)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--border)', padding: '12px 24px' }}>
-        <div className="tab-bar-scroll" style={{ maxWidth: 1100, margin: '0 auto' }}>
+      <div className="mining-tab-bar-container">
+        <div className="tab-bar-scroll mining-tab-bar">
           {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveSection(tab.id)} style={{
-              background: activeSection === tab.id ? 'rgba(34,211,238,0.1)' : 'none',
-              border: activeSection === tab.id ? '1px solid rgba(34,211,238,0.3)' : '1px solid transparent',
-              borderRadius: 10, padding: '8px 20px', fontFamily: 'var(--sans)',
-              fontSize: 13, fontWeight: 600, color: activeSection === tab.id ? 'var(--cyan)' : 'var(--text2)',
-              cursor: 'pointer', transition: 'all 0.2s',
-            }}>
+            <button key={tab.id} onClick={() => setActiveSection(tab.id)} className={`mining-tab-btn ${activeSection === tab.id ? 'active' : ''}`}>
               {tab.label}
             </button>
           ))}
@@ -283,125 +233,100 @@ export default function MiningView({ lang = "vi" }) {
           <div style={{ animation: "fadeIn 0.3s ease" }}>
 
             {/* Title */}
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 8 }}>
-                {t.pow}
-              </div>
-              <h2 style={{ fontSize: 'clamp(24px,4vw,40px)', fontWeight: 900, letterSpacing: '-1px', marginBottom: 12 }}>{t.simTitle}</h2>
-              <p style={{ color: 'var(--text2)', fontSize: 15, maxWidth: 560, lineHeight: 1.7 }}>
-                {t.simDesc}
-              </p>
+            <div className="mining-section-header">
+              <div className="mining-section-suptitle text-cyan">{t.pow}</div>
+              <h2 className="mining-section-title">{t.simTitle}</h2>
+              <p className="mining-section-desc">{t.simDesc}</p>
             </div>
 
             {/* Config Panel */}
-            <div className="card" style={{ marginBottom: 24 }}>
+            <Card className="config-card">
               <div className="grid-2" style={{ gap: 24, marginBottom: 20 }}>
                 <div>
                   <div className="label">{t.blockData}</div>
-                  <input className="inp" value={mineData} onChange={e => setMineData(e.target.value)}
+                  <Input value={mineData} onChange={e => setMineData(e.target.value)}
                     placeholder={t.blockDataPlaceholder}
                     disabled={mining} />
                 </div>
                 <div>
                   <div className="label">{t.diffLabel} {difficulty}</div>
-                  <div style={{ padding: '12px 16px', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 20, color: 'var(--amber)', fontWeight: 700, letterSpacing: 2 }}>
+                  <div className="config-diff-display">
+                    <span className="config-diff-zeros">
                       {"0".repeat(difficulty)}
                     </span>
-                    <span style={{ fontSize: 12, color: 'var(--text3)' }}>
+                    <span className="config-diff-rule">
                       {t.mustStart} {difficulty} {t.zeros}
                     </span>
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div className="config-actions">
                 {!mining ? (
-                  <button className="btn btn-primary" onClick={startMining} style={{ boxShadow: '0 0 20px rgba(34,211,238,0.2)' }}>
+                  <Button onClick={startMining} style={{ boxShadow: '0 0 20px rgba(34,211,238,0.2)' }}>
                     {t.startMine}
-                  </button>
+                  </Button>
                 ) : (
-                  <button className="btn" onClick={stopMining} style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.4)', color: 'var(--red)' }}>
+                  <Button onClick={stopMining} className="btn-stop-mine">
                     {t.stopMine}
-                  </button>
+                  </Button>
                 )}
-                <button className="btn btn-ghost" onClick={resetChain} disabled={mining}>{t.resetChain}</button>
+                <Button variant="ghost" onClick={resetChain} disabled={mining}>{t.resetChain}</Button>
               </div>
-            </div>
+            </Card>
 
             {/* Live Mining Panel */}
             {(mining || mineResult) && (
-              <div className="anim-border" style={{
-                '--glow-color': mineResult ? 'var(--green)' : 'var(--cyan)',
-                animation: 'fadeInUp 0.4s ease',
-                background: 'var(--bg-card)',
-                border: mineResult ? '1px solid rgba(56,189,248,0.4)' : '1px solid rgba(192,132,252,0.3)',
-                borderRadius: 20, overflow: 'hidden', marginBottom: 24,
-                boxShadow: mining ? '0 0 40px rgba(192,132,252,0.08)' : mineResult ? '0 0 40px rgba(56,189,248,0.1)' : 'none',
-              }}>
+              <div className={`anim-border live-mining-panel ${mining ? 'mining' : mineResult ? 'success' : 'idle'}`} style={{ '--glow-color': mineResult ? 'var(--green)' : 'var(--cyan)' }}>
                 {/* Nonce Big Display */}
-                <div style={{ textAlign: 'center', padding: '32px 24px', borderBottom: '1px solid rgba(255,255,255,0.04)', position: 'relative' }}>
+                <div className="nonce-display-area">
                   {mining && (
-                    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+                    <div className="flow-line-container">
                       {[...Array(4)].map((_, i) => (
-                        <div key={i} style={{
-                          position: 'absolute', width: '1px', height: '60%',
-                          left: `${25 + i * 25}%`, top: '20%',
-                          background: 'linear-gradient(to bottom, transparent, rgba(34,211,238,0.2), transparent)',
-                          animation: `flow 1.5s ${i * 0.3}s infinite`,
-                        }} />
+                        <div key={i} className="flow-line" style={{ left: `${25 + i * 25}%`, top: '20%', animation: `flow 1.5s ${i * 0.3}s infinite` }} />
                       ))}
                     </div>
                   )}
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8 }}>{t.nonceLabel}</div>
-                  <div style={{
-                    fontFamily: 'var(--mono)', fontSize: 'clamp(40px,8vw,72px)', fontWeight: 900, lineHeight: 1,
-                    background: 'linear-gradient(135deg, var(--cyan), var(--blue))',
-                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                    filter: mining ? 'drop-shadow(0 0 20px rgba(34,211,238,0.4))' : 'none',
-                    transition: 'filter 0.3s',
-                  }}>
+                  <div className="nonce-label">{t.nonceLabel}</div>
+                  <div className={`nonce-big-value ${mining ? 'mining' : ''}`}>
                     {currentNonce.toLocaleString()}
                   </div>
                   {mining && (
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+                    <div className="mining-dots">
                       {[0, 1, 2].map(i => (
-                        <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--cyan)', animation: `dotPulse 1.2s ${i * 0.2}s infinite` }} />
+                        <div key={i} className="mining-dot" style={{ animation: `dotPulse 1.2s ${i * 0.2}s infinite` }} />
                       ))}
                     </div>
                   )}
                   {mineResult && !mineResult.failed && (
-                    <div style={{ marginTop: 12, fontSize: 14, color: 'var(--green)', fontWeight: 600 }}>
+                    <div className="mining-success-text">
                       {t.foundHash} {currentNonce.toLocaleString()} {t.tries}
                     </div>
                   )}
                 </div>
 
                 {/* Live Hash Display */}
-                <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className="live-hash-section">
                   <div className="label">{t.currentHash}</div>
-                  <div style={{
-                    padding: '14px 18px', background: 'var(--bg-input)',
-                    border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, minHeight: 64,
-                  }}>
+                  <div className="live-hash-box">
                     {renderLiveHash(currentHash, mineTarget)}
                   </div>
-                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>
+                  <div className="live-target-info">
                     {t.targetLabel}{' '}
-                    <span style={{ color: 'var(--green)', fontFamily: 'var(--mono)', fontWeight: 700 }}>{mineTarget}</span>
+                    <span className="text-green text-mono font-bold">{mineTarget}</span>
                   </div>
                 </div>
 
                 {/* Stats Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', padding: '16px 24px', gap: 8 }}>
+                <div className="live-stats-grid">
                   {[
                     { label: t.statTime, value: `${(elapsed / 1000).toFixed(1)}s`, color: 'var(--cyan)' },
                     { label: t.statRate, value: hashRate.toLocaleString(), color: 'var(--amber)' },
                     { label: t.statTries, value: currentNonce.toLocaleString(), color: 'var(--blue)' },
                     { label: t.statDiff, value: difficulty, color: 'var(--purple)' },
                   ].map((stat, i) => (
-                    <div key={i} style={{ textAlign: 'center', padding: '12px', background: 'var(--bg2)', borderRadius: 10 }}>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 900, color: stat.color, marginBottom: 4 }}>{stat.value}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{stat.label}</div>
+                    <div key={i} className="live-stat-card">
+                      <div className="live-stat-val" style={{ color: stat.color }}>{stat.value}</div>
+                      <div className="live-stat-label">{stat.label}</div>
                     </div>
                   ))}
                 </div>
@@ -409,11 +334,9 @@ export default function MiningView({ lang = "vi" }) {
             )}
 
             {/* Tip */}
-            <div className="anim-border" style={{ '--glow-color': 'var(--cyan)', padding: '16px 20px', background: 'rgba(192,132,252,0.03)', border: '1px solid rgba(192,132,252,0.12)', borderRadius: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--cyan)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6 }}>
-                {t.howItWorks}
-              </div>
-              <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.8 }}>{t.miningTip}</p>
+            <div className="anim-border mining-tip-card" style={{ '--glow-color': 'var(--cyan)' }}>
+              <div className="mining-tip-title">{t.howItWorks}</div>
+              <p className="mining-tip-desc">{t.miningTip}</p>
             </div>
           </div>
         )}
@@ -421,23 +344,16 @@ export default function MiningView({ lang = "vi" }) {
         {/* ═══════ EXPLORER TAB ═══════ */}
         {activeSection === "explorer" && (
           <div style={{ animation: "fadeIn 0.3s ease" }}>
-            <div style={{ marginBottom: 28 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--cyan)', marginBottom: 8 }}>{t.chainState}</div>
-              <h2 style={{ fontSize: 'clamp(22px,3vw,36px)', fontWeight: 900, letterSpacing: '-0.5px', marginBottom: 10 }}>{t.expTitle}</h2>
-              <p style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 20 }}>{t.expDesc}</p>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <button className="btn btn-primary btn-sm" onClick={addBlock}>{t.addBlockBtn}</button>
-                <button className="btn btn-ghost btn-sm" onClick={resetChain}>{t.resetBtn}</button>
+            <div className="mining-section-header">
+              <div className="mining-section-suptitle text-cyan">{t.chainState}</div>
+              <h2 className="mining-section-title">{t.expTitle}</h2>
+              <p className="mining-section-desc">{t.expDesc}</p>
+              <div className="chain-controls">
+                <Button size="sm" onClick={addBlock}>{t.addBlockBtn}</Button>
+                <Button variant="ghost" size="sm" onClick={resetChain}>{t.resetBtn}</Button>
                 {chain && (
-                  <div style={{
-                    marginLeft: 'auto', padding: '6px 14px',
-                    background: chain.valid ? 'rgba(56,189,248,0.1)' : 'rgba(251,113,133,0.1)',
-                    border: `1px solid ${chain.valid ? 'rgba(56,189,248,0.4)' : 'rgba(251,113,133,0.4)'}`,
-                    borderRadius: 99, fontSize: 12, fontWeight: 700, letterSpacing: '0.5px',
-                    color: chain.valid ? 'var(--green)' : 'var(--red)',
-                    boxShadow: `0 0 12px ${chain.valid ? 'rgba(56,189,248,0.15)' : 'rgba(251,113,133,0.15)'}`,
-                  }}>
-                    <span style={{ marginRight: 6, display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: chain.valid ? 'var(--green)' : 'var(--red)', verticalAlign: 'middle', boxShadow: chain.valid ? '0 0 8px rgba(56,189,248,0.8)' : '0 0 8px rgba(251,113,133,0.8)' }} />
+                  <div className={`chain-status-badge ${chain.valid ? 'valid' : 'invalid'}`}>
+                    <span className={`chain-status-dot ${chain.valid ? 'valid' : 'invalid'}`} />
                     {chain.valid ? t.chainValid : t.chainInvalid}
                   </div>
                 )}
@@ -445,8 +361,8 @@ export default function MiningView({ lang = "vi" }) {
             </div>
 
             {/* Horizontal Chain */}
-            <div style={{ overflowX: 'auto', paddingBottom: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 0, width: 'max-content', paddingBottom: 4 }}>
+            <div className="chain-scroll-area">
+              <div className="chain-track">
                 {chain && chain.chain.map((block, i) => (
                   <React.Fragment key={i}>
                     {i > 0 && <ChainArrow valid={block.blockValid} />}
@@ -464,20 +380,13 @@ export default function MiningView({ lang = "vi" }) {
 
             {/* Tamper Panel */}
             {tamperIdx !== null && (
-              <div className="anim-border" style={{
-                '--glow-color': 'var(--red)',
-                animation: 'fadeInUp 0.3s ease', marginTop: 20, padding: '20px 24px',
-                background: 'rgba(251,113,133,0.04)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 16,
-              }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--red)', marginBottom: 8 }}>
-                  {t.tamperBlock} #{tamperIdx}
-                </div>
-                <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 14, lineHeight: 1.7 }}>{t.tamperDesc}</p>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <input className="inp" style={{ flex: 1 }} value={tamperText}
-                    onChange={e => setTamperText(e.target.value)} placeholder={t.fakeDataPlaceholder} />
-                  <button className="btn btn-sm" onClick={() => doTamper(tamperIdx)} style={{ background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', color: 'var(--red)' }}>{t.tamperBtn}</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setTamperIdx(null)}>{t.cancelBtn}</button>
+              <div className="anim-border tamper-panel" style={{ '--glow-color': 'var(--red)' }}>
+                <div className="tamper-title">{t.tamperBlock} #{tamperIdx}</div>
+                <p className="tamper-desc">{t.tamperDesc}</p>
+                <div className="tamper-actions">
+                  <Input style={{ flex: 1 }} value={tamperText} onChange={e => setTamperText(e.target.value)} placeholder={t.fakeDataPlaceholder} />
+                  <Button size="sm" onClick={() => doTamper(tamperIdx)} className="btn-tamper-submit">{t.tamperBtn}</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setTamperIdx(null)}>{t.cancelBtn}</Button>
                 </div>
               </div>
             )}
@@ -487,72 +396,50 @@ export default function MiningView({ lang = "vi" }) {
         {/* ═══════ DIFFICULTY TAB ═══════ */}
         {activeSection === "difficulty" && (
           <div style={{ animation: "fadeIn 0.3s ease" }}>
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--purple)', marginBottom: 8 }}>{t.networkSetting}</div>
-              <h2 style={{ fontSize: 'clamp(22px,3vw,36px)', fontWeight: 900, letterSpacing: '-0.5px', marginBottom: 10 }}>{t.diffTitle}</h2>
-              <p style={{ color: 'var(--text2)', fontSize: 14 }}>{t.diffDesc}</p>
+            <div className="mining-section-header">
+              <div className="mining-section-suptitle text-purple">{t.networkSetting}</div>
+              <h2 className="mining-section-title">{t.diffTitle}</h2>
+              <p className="mining-section-desc">{t.diffDesc}</p>
             </div>
 
-            <div className="card" style={{ marginBottom: 28 }}>
+            <Card className="config-card">
               <div className="label">{t.chooseDiff}</div>
-              <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+              <div className="diff-btns-row">
                 {[1, 2, 3, 4, 5].map(d => (
-                  <button key={d} onClick={() => changeDifficulty(d)} style={{
-                    width: 48, height: 48, borderRadius: 12, fontSize: 18, fontWeight: 800,
-                    fontFamily: 'var(--mono)', cursor: 'pointer', transition: 'all 0.2s',
-                    background: d === difficulty ? 'linear-gradient(135deg, var(--cyan), var(--blue))' : 'rgba(255,255,255,0.04)',
-                    border: d === difficulty ? 'none' : '1px solid var(--border)',
-                    color: d === difficulty ? '#030712' : 'var(--text2)',
-                    boxShadow: d === difficulty ? '0 0 18px rgba(34,211,238,0.3)' : 'none',
-                  }}>
+                  <button key={d} onClick={() => changeDifficulty(d)} className={`diff-btn ${d === difficulty ? 'active' : ''}`}>
                     {d}
                   </button>
                 ))}
               </div>
-              <p style={{ fontSize: 13, color: 'var(--text2)' }}>
-                {t.currentDiff} <span style={{ color: 'var(--cyan)', fontWeight: 700 }}>{difficulty}</span>
+              <p className="diff-target-summary">
+                {t.currentDiff} <span className="text-cyan font-bold">{difficulty}</span>
                 {' — '}
-                <span style={{ fontFamily: 'var(--mono)', color: 'var(--green)' }}>{"0".repeat(difficulty)}</span>
-                <span style={{ fontFamily: 'var(--mono)', color: 'var(--text3)' }}>{"x".repeat(Math.min(12, 64 - difficulty))}</span>
+                <span className="text-green text-mono">{"0".repeat(difficulty)}</span>
+                <span className="text-muted text-mono">{"x".repeat(Math.min(12, 64 - difficulty))}</span>
               </p>
-            </div>
+            </Card>
 
             <div className="label" style={{ marginBottom: 14 }}>{t.compareTarget}</div>
-            <div style={{ display: 'grid', gap: 12 }}>
+            <div className="diff-target-list">
               {[1, 2, 3, 4, 5].map(d => (
-                <div key={d} onClick={() => changeDifficulty(d)} style={{
-                  display: 'grid', gridTemplateColumns: 'auto 1fr auto',
-                  alignItems: 'center', gap: 20, padding: '14px 20px',
-                  background: d === difficulty ? 'rgba(34,211,238,0.05)' : 'var(--bg1)',
-                  border: `1px solid ${d === difficulty ? 'rgba(34,211,238,0.35)' : 'var(--border)'}`,
-                  borderRadius: 14, transition: 'all 0.25s', cursor: 'pointer',
-                }}
-                  onMouseEnter={e => { if (d !== difficulty) e.currentTarget.style.borderColor = 'var(--border2)'; }}
-                  onMouseLeave={e => { if (d !== difficulty) e.currentTarget.style.borderColor = 'var(--border)'; }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 800,
-                    background: d === difficulty ? 'linear-gradient(135deg, var(--cyan), var(--blue))' : 'var(--bg2)',
-                    color: d === difficulty ? '#030712' : 'var(--text2)',
-                  }}>{d}</div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 13 }}>
-                    <span style={{ color: 'var(--green)', fontWeight: 700 }}>{"0".repeat(d)}</span>
-                    <span style={{ color: 'var(--text3)' }}>{"x".repeat(Math.min(20, 64 - d))}</span>
-                    <span style={{ color: 'var(--text3)', fontSize: 11 }}>...</span>
+                <div key={d} onClick={() => changeDifficulty(d)} className={`diff-target-row ${d === difficulty ? 'active' : ''}`}>
+                  <div className="diff-target-icon">{d}</div>
+                  <div className="diff-target-hash">
+                    <span className="text-green font-bold">{"0".repeat(d)}</span>
+                    <span className="text-muted">{"x".repeat(Math.min(20, 64 - d))}</span>
+                    <span className="text-muted" style={{ fontSize: 11 }}>...</span>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--amber)', fontWeight: 700 }}>
-                      ~{Math.pow(16, d).toLocaleString()}
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--text3)' }}>{t.attempts}</div>
+                  <div className="diff-target-attempts">
+                    <div className="diff-target-attempts-val">~{Math.pow(16, d).toLocaleString()}</div>
+                    <div className="diff-target-attempts-label">{t.attempts}</div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="anim-border" style={{ '--glow-color': 'var(--purple)', marginTop: 28, padding: '20px 24px', background: 'rgba(167,139,250,0.04)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--purple)', marginBottom: 10 }}>{t.rule}</div>
-              <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.8 }}>
+            <div className="anim-border rule-card" style={{ '--glow-color': 'var(--purple)' }}>
+              <div className="rule-title">{t.rule}</div>
+              <p className="rule-desc">
                 {t.rulePre1} <strong style={{ color: 'var(--amber)' }}>{t.ruleBold1}</strong>{t.rulePre2} <strong style={{ color: 'var(--red)' }}>{t.ruleBold2}</strong> {t.rulePost}
               </p>
             </div>
@@ -562,31 +449,31 @@ export default function MiningView({ lang = "vi" }) {
         {/* ═══════ EDUCATION TAB ═══════ */}
         {activeSection === "education" && (
           <div style={{ animation: "fadeIn 0.3s ease" }}>
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--blue)', marginBottom: 8 }}>{t.kb}</div>
-              <h2 style={{ fontSize: 'clamp(22px,3vw,36px)', fontWeight: 900, letterSpacing: '-0.5px' }}>{t.theoryTitle}</h2>
+            <div className="mining-section-header">
+              <div className="mining-section-suptitle text-blue">{t.kb}</div>
+              <h2 className="mining-section-title">{t.theoryTitle}</h2>
             </div>
-            <div style={{ display: 'grid', gap: 20 }}>
+            <div className="edu-cards-grid">
               {[
                 {
                   color: 'var(--cyan)', label: `${t.concept} 01`,
                   title: t.concept1Title,
-                  body: (<><p>{t.concept1P1}</p><div style={{ marginTop: 14, background: 'var(--bg-input)', border: '1px solid var(--border)', borderLeft: '3px solid var(--cyan)', borderRadius: 10, padding: '12px 16px', fontFamily: 'var(--mono)', fontSize: 12, lineHeight: 1.9 }}>SHA256(index + timestamp + data + prevHash + <span style={{ color: 'var(--amber)' }}>nonce</span>)<br /><span style={{ color: 'var(--green)' }}>→ "000abc91f..." ✓ {t.concept1Valid}</span></div></>),
+                  body: (<><p>{t.concept1P1}</p><div className="edu-code-block" style={{ borderLeftColor: 'var(--cyan)' }}>SHA256(index + timestamp + data + prevHash + <span style={{ color: 'var(--amber)' }}>nonce</span>)<br /><span className="text-green">→ "000abc91f..." ✓ {t.concept1Valid}</span></div></>),
                 },
                 {
                   color: 'var(--amber)', label: `${t.concept} 02`,
                   title: t.concept2Title,
-                  body: (<><p>{t.concept2P1}</p><p style={{ color: 'var(--text2)', marginTop: 10 }}>{t.concept2P2}</p></>),
+                  body: (<><p>{t.concept2P1}</p><p className="text-muted" style={{ marginTop: 10 }}>{t.concept2P2}</p></>),
                 },
                 {
                   color: 'var(--purple)', label: `${t.concept} 03`,
                   title: t.concept3Title,
-                  body: (<div style={{ display: 'grid', gap: 8, marginTop: 4 }}>
+                  body: (<div className="edu-diff-list">
                       {[1, 2, 3, 4, 5].map(d => (
-                        <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 12, fontFamily: 'var(--mono)', fontSize: 13, padding: '8px 12px', background: 'var(--bg-input)', borderRadius: 8 }}>
+                        <div key={d} className="edu-diff-item">
                           <span style={{ color: 'var(--purple)', minWidth: 60 }}>Diff = {d}</span>
-                          <span style={{ color: 'var(--green)', fontWeight: 700 }}>{"0".repeat(d)}</span>
-                          <span style={{ color: 'var(--text3)' }}>{"x".repeat(10)}</span>
+                          <span className="text-green font-bold">{"0".repeat(d)}</span>
+                          <span className="text-muted">{"x".repeat(10)}</span>
                           <span style={{ marginLeft: 'auto', color: 'var(--amber)', fontSize: 12 }}>~{Math.pow(16, d).toLocaleString()} {t.attempts}</span>
                         </div>
                       ))}
@@ -595,19 +482,19 @@ export default function MiningView({ lang = "vi" }) {
                 {
                   color: 'var(--green)', label: `${t.concept} 04`,
                   title: t.concept4Title,
-                  body: (<><p>{t.concept4P1}</p><p style={{ color: 'var(--text2)', marginTop: 10 }}>{t.concept4P2}</p></>),
+                  body: (<><p>{t.concept4P1}</p><p className="text-muted" style={{ marginTop: 10 }}>{t.concept4P2}</p></>),
                 },
                 {
                   color: 'var(--red)', label: `${t.concept} 05`,
                   title: t.concept5Title,
-                  body: (<><p>{t.concept5P1}</p><p style={{ color: 'var(--text2)', marginTop: 10 }}>{t.concept5P2}</p></>),
+                  body: (<><p>{t.concept5P1}</p><p className="text-muted" style={{ marginTop: 10 }}>{t.concept5P2}</p></>),
                 },
               ].map((item, i) => (
-                <div key={i} className="card" style={{ animation: `fadeInUp 0.4s ${i * 0.07}s both`, borderLeft: `3px solid ${item.color}`, padding: '24px 28px' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: item.color, marginBottom: 8 }}>{item.label}</div>
-                  <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 16 }}>{item.title}</h3>
-                  <div style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.85 }}>{item.body}</div>
-                </div>
+                <Card key={i} className="edu-card" style={{ animation: `fadeInUp 0.4s ${i * 0.07}s both`, borderLeft: `3px solid ${item.color}` }}>
+                  <div className="edu-card-label" style={{ color: item.color }}>{item.label}</div>
+                  <h3 className="edu-card-title">{item.title}</h3>
+                  <div className="edu-card-body">{item.body}</div>
+                </Card>
               ))}
             </div>
           </div>

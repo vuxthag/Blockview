@@ -1,21 +1,115 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { LANG } from '../../data/lang.js';
 
 /**
- * MerkleNode
+ * MerkleNode — theme-aware node with portal-based Detail Panel.
  *
- * Props:
- *   hash        – full SHA-256 string
- *   type        – 'root' | 'intermediate' | 'leaf'
- *   isRoot      – boolean
- *   label       – optional human label (e.g. "Transaction A")
- *   leftChild   – hash of left child (for panel)
- *   rightChild  – hash of right child (for panel)
- *   isHighlighted – boolean – glow path-to-root effect
- *   nodeId      – string key used by parent to set highlight paths
- *   onHover     – (nodeId | null) => void
- *   lang        – 'vi' | 'en'
+ * Uses CSS variables exclusively for colors so Light/Dark mode
+ * is automatic. Node accent colors (purple/blue/cyan) are explicit
+ * brand colors that work on both backgrounds.
  */
+
+// ── Per-type accent palette (works on any background) ─────────────────────
+const TYPE_TOKENS = {
+  root: {
+    accent:     '#a855f7',
+    accentSoft: 'rgba(168,85,247,0.15)',
+    accentBorder:'rgba(168,85,247,0.5)',
+    glow:       '0 0 0 1px rgba(168,85,247,0.4), 0 0 20px rgba(168,85,247,0.3)',
+    glowActive: '0 0 0 2px rgba(168,85,247,0.7), 0 0 32px rgba(168,85,247,0.5)',
+    text:       '#d8b4fe',
+  },
+  intermediate: {
+    accent:     '#3b82f6',
+    accentSoft: 'rgba(59,130,246,0.12)',
+    accentBorder:'rgba(59,130,246,0.4)',
+    glow:       '0 0 0 1px rgba(59,130,246,0.3), 0 0 16px rgba(59,130,246,0.25)',
+    glowActive: '0 0 0 2px rgba(59,130,246,0.6), 0 0 28px rgba(59,130,246,0.45)',
+    text:       '#93c5fd',
+  },
+  leaf: {
+    accent:     '#06b6d4',
+    accentSoft: 'rgba(6,182,212,0.1)',
+    accentBorder:'rgba(6,182,212,0.35)',
+    glow:       '0 0 0 1px rgba(6,182,212,0.25), 0 0 14px rgba(6,182,212,0.2)',
+    glowActive: '0 0 0 2px rgba(6,182,212,0.55), 0 0 24px rgba(6,182,212,0.4)',
+    text:       '#67e8f9',
+  },
+};
+
+// ── Portal-based floating panel ────────────────────────────────────────────
+function DetailPanel({ anchorRef, onClose, children }) {
+  const panelRef = useRef(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [mounted, setMounted] = useState(false);
+
+  // Position panel below anchor
+  useEffect(() => {
+    const place = () => {
+      if (!anchorRef.current || !panelRef.current) return;
+      const anchor = anchorRef.current.getBoundingClientRect();
+      const panel  = panelRef.current.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      let top  = anchor.bottom + window.scrollY + 10;
+      let left = anchor.left + anchor.width / 2 - panel.width / 2 + window.scrollX;
+
+      // Clamp horizontally
+      if (left < 8) left = 8;
+      if (left + panel.width > vw - 8) left = vw - panel.width - 8;
+
+      // Flip above if not enough space below
+      if (anchor.bottom + panel.height + 20 > vh) {
+        top = anchor.top + window.scrollY - panel.height - 10;
+      }
+
+      setPos({ top, left });
+    };
+
+    // Mount first (invisible), then position
+    setMounted(true);
+    const raf = requestAnimationFrame(place);
+    window.addEventListener('resize', place);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', place); };
+  }, [anchorRef]);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (panelRef.current && !panelRef.current.contains(e.target) &&
+          anchorRef.current && !anchorRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    // Delay to avoid immediate close from the same click that opened
+    const timer = setTimeout(() => document.addEventListener('mousedown', handler), 10);
+    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handler); };
+  }, [onClose, anchorRef]);
+
+  return ReactDOM.createPortal(
+    <div
+      ref={panelRef}
+      style={{
+        position: 'absolute',
+        top: pos.top,
+        left: pos.left,
+        width: 300,
+        zIndex: 9999,
+        opacity: mounted ? 1 : 0,
+        transform: mounted ? 'translateY(0) scale(1)' : 'translateY(-6px) scale(0.97)',
+        transition: 'opacity 0.18s ease, transform 0.18s ease',
+        pointerEvents: mounted ? 'auto' : 'none',
+      }}
+    >
+      {children}
+    </div>,
+    document.body
+  );
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────
 export default function MerkleNode({
   hash = '',
   type = 'leaf',
@@ -27,11 +121,24 @@ export default function MerkleNode({
   onHover,
   nodeId,
   lang = 'vi',
+  panelOpen: propPanelOpen,
+  onTogglePanel,
 }) {
   const t = LANG[lang].merkle;
-  const [copied, setCopied] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [copied, setCopied]     = useState(false);
+  const [hovered, setHovered]   = useState(false);
+  const nodeRef                 = useRef(null);
+
+  const isPanelOpen = propPanelOpen !== undefined ? propPanelOpen : false;
+
+  const handleToggle = (e) => {
+    e?.stopPropagation();
+    if (onTogglePanel) onTogglePanel();
+  };
+
+  const handleClose = () => {
+    if (onTogglePanel) onTogglePanel(false);
+  };
 
   const shortHash = hash.length > 16
     ? `${hash.slice(0, 6)}…${hash.slice(-6)}`
@@ -45,54 +152,15 @@ export default function MerkleNode({
     });
   };
 
-  // ── Per-type visual tokens ──────────────────────────────────────
-  const tokens = {
-    root: {
-      border: isHighlighted
-        ? '2px solid rgba(168,85,247,1)'
-        : '2px solid rgba(168,85,247,0.7)',
-      bg: isHighlighted
-        ? 'rgba(88,28,135,0.45)'
-        : 'rgba(88,28,135,0.25)',
-      color: '#d8b4fe',
-      labelColor: '#a855f7',
-      glow: '0 0 24px rgba(168,85,247,0.55), 0 0 6px rgba(168,85,247,0.4)',
-    },
-    intermediate: {
-      border: isHighlighted
-        ? '2px solid rgba(59,130,246,0.9)'
-        : '1.5px solid rgba(59,130,246,0.5)',
-      bg: isHighlighted
-        ? 'rgba(30,58,138,0.45)'
-        : 'rgba(30,58,138,0.2)',
-      color: '#93c5fd',
-      labelColor: '#60a5fa',
-      glow: '0 0 20px rgba(59,130,246,0.5)',
-    },
-    leaf: {
-      border: isHighlighted
-        ? '2px solid rgba(34,211,238,0.8)'
-        : '1.5px solid rgba(34,211,238,0.4)',
-      bg: isHighlighted
-        ? 'rgba(6,78,59,0.35)'
-        : 'rgba(6,78,59,0.15)',
-      color: '#67e8f9',
-      labelColor: '#22d3ee',
-      glow: '0 0 18px rgba(34,211,238,0.5)',
-    },
-  };
+  const s = TYPE_TOKENS[type] || TYPE_TOKENS.leaf;
+  const isActive = hovered || isHighlighted;
 
-  const s = tokens[type] || tokens.leaf;
-  const active = hovered || isHighlighted;
-
-  // ── Node type label ─────────────────────────────────────────────
   const getNodeTypeLabel = () => {
     if (isRoot) return t.nodeTypeRoot;
     if (type === 'intermediate') return t.nodeTypeInternal;
     return t.nodeTypeLeaf;
   };
 
-  // ── Explanation text for the floating panel ─────────────────────
   const getExplanation = () => {
     if (isRoot) return t.explRoot;
     if (type === 'intermediate') return t.explIntermediate;
@@ -100,37 +168,45 @@ export default function MerkleNode({
     return t.explLeaf.replace('{{label}}', displayLabel);
   };
 
-  // ── Floating detail panel ───────────────────────────────────────
-  const DetailPanel = () => (
+  // ── Panel Content ──────────────────────────────────────────────────────
+  const PanelContent = (
     <div
       onClick={e => e.stopPropagation()}
       style={{
-        position: 'absolute',
-        top: 'calc(100% + 12px)',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 300,
-        background: 'rgba(2,6,23,0.97)',
-        border: '1px solid rgba(139,92,246,0.4)',
-        borderRadius: 14,
-        padding: '16px 18px',
-        zIndex: 200,
-        boxShadow: '0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,92,246,0.1)',
-        backdropFilter: 'blur(20px)',
-        animation: 'fadeInUp 0.2s ease',
+        background: 'var(--bg1)',
+        border: `1px solid ${s.accentBorder}`,
+        borderRadius: 16,
+        padding: '18px 20px',
+        boxShadow: `0 16px 48px rgba(0,0,0,0.25), ${s.glow}`,
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        position: 'relative',
       }}
     >
-      {/* Close */}
+      {/* Close button */}
       <button
-        onClick={e => { e.stopPropagation(); setPanelOpen(false); }}
+        onClick={handleClose}
         style={{
-          position: 'absolute', top: 8, right: 8,
-          background: 'none', border: 'none', color: '#475569',
-          cursor: 'pointer', fontSize: 14, padding: 4, lineHeight: 1,
-          borderRadius: 6, transition: 'color 0.2s',
+          position: 'absolute', top: 10, right: 10,
+          width: 24, height: 24,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'transparent',
+          border: '1px solid var(--border)',
+          borderRadius: 6,
+          color: 'var(--text3)',
+          cursor: 'pointer', fontSize: 12, lineHeight: 1,
+          transition: 'all 0.15s',
         }}
-        onMouseEnter={e => e.currentTarget.style.color = '#f1f5f9'}
-        onMouseLeave={e => e.currentTarget.style.color = '#475569'}
+        onMouseEnter={e => {
+          e.currentTarget.style.background = 'var(--bg3)';
+          e.currentTarget.style.color = 'var(--text)';
+          e.currentTarget.style.borderColor = 'var(--text2)';
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = 'var(--text3)';
+          e.currentTarget.style.borderColor = 'var(--border)';
+        }}
       >
         ✕
       </button>
@@ -139,49 +215,51 @@ export default function MerkleNode({
       <div style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         padding: '3px 10px', borderRadius: 99,
-        background: `${s.labelColor}18`,
-        border: `1px solid ${s.labelColor}44`,
-        marginBottom: 12,
+        background: s.accentSoft,
+        border: `1px solid ${s.accentBorder}`,
+        marginBottom: 14,
       }}>
-        <div style={{ width: 6, height: 6, borderRadius: '50%', background: s.labelColor }} />
-        <span style={{ fontSize: 10, fontWeight: 700, color: s.labelColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: s.accent, flexShrink: 0 }} />
+        <span style={{ fontSize: 10, fontWeight: 700, color: s.accent, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           {getNodeTypeLabel()}
         </span>
       </div>
 
       {/* Label */}
       {label && (
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 10, color: '#475569', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             {t.panelTransaction}
           </div>
-          <div style={{ fontSize: 12, color: '#f1f5f9', fontWeight: 600 }}>{label}</div>
+          <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{label}</div>
         </div>
       )}
 
       {/* Full hash */}
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <span style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             {t.panelShaHash}
           </span>
           <button
             onClick={e => copy(e, hash)}
             style={{
-              fontSize: 10, color: copied ? '#22d3ee' : '#64748b',
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              fontSize: 10,
+              color: copied ? s.accent : 'var(--text3)',
+              background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px',
               transition: 'color 0.2s',
+              borderRadius: 4,
             }}
           >
             {copied ? t.panelCopied : t.panelCopy}
           </button>
         </div>
         <div style={{
-          fontFamily: 'monospace', fontSize: 9.5, color: s.color,
+          fontFamily: 'var(--mono)', fontSize: 9.5, color: s.text,
           wordBreak: 'break-all', lineHeight: 1.7,
-          background: 'rgba(15,23,42,0.8)', borderRadius: 8,
+          background: 'var(--bg3)', borderRadius: 8,
           padding: '8px 10px',
-          border: `1px solid ${s.labelColor}22`,
+          border: `1px solid ${s.accentBorder}`,
         }}>
           {hash}
         </div>
@@ -189,46 +267,61 @@ export default function MerkleNode({
 
       {/* Children hashes */}
       {(leftChild || rightChild) && (
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>
             {t.panelChildHashes}
           </div>
           {leftChild && (
-            <div style={{ marginBottom: 5 }}>
-              <span style={{ fontSize: 9, color: '#3b82f6', fontWeight: 600 }}>{t.panelLeft}{'  '}</span>
-              <span style={{ fontFamily: 'monospace', fontSize: 9, color: '#64748b' }}>{leftChild.slice(0, 20)}…</span>
+            <div style={{ marginBottom: 5, display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ fontSize: 9, color: 'var(--blue)', fontWeight: 600, flexShrink: 0 }}>{t.panelLeft}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text2)' }}>{leftChild.slice(0, 20)}…</span>
             </div>
           )}
-          {rightChild && (
-            <div>
-              <span style={{ fontSize: 9, color: '#22d3ee', fontWeight: 600 }}>{t.panelRight}{' '}</span>
-              <span style={{ fontFamily: 'monospace', fontSize: 9, color: '#64748b' }}>{rightChild.slice(0, 20)}…</span>
+          {rightChild ? (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ fontSize: 9, color: '#06b6d4', fontWeight: 600, flexShrink: 0 }}>{t.panelRight}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text2)' }}>{rightChild.slice(0, 20)}…</span>
             </div>
-          )}
+          ) : leftChild ? (
+            <div style={{
+              marginTop: 6,
+              background: 'rgba(6,182,212,0.06)',
+              border: '1px solid rgba(6,182,212,0.25)',
+              padding: '8px 10px', borderRadius: 8,
+            }}>
+              <span style={{ fontSize: 10, color: '#06b6d4', fontWeight: 700, display: 'block', marginBottom: 3 }}>
+                {lang === 'vi' ? '⚠️ Nhánh mồ côi (Nhân đôi)' : '⚠️ Orphan Branch (Duplicated)'}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--text2)', lineHeight: 1.5 }}>
+                {lang === 'vi' ? 'Node này được tính bằng Hash(Trái + Trái)' : 'This node is computed as Hash(Left + Left)'}
+              </span>
+            </div>
+          ) : null}
         </div>
       )}
 
       {/* Explanation */}
       <div style={{
-        background: 'rgba(139,92,246,0.06)', borderRadius: 8,
+        background: 'var(--bg3)', borderRadius: 10,
         padding: '10px 12px',
-        border: '1px solid rgba(139,92,246,0.15)',
+        border: '1px solid var(--border)',
       }}>
-        <div style={{ fontSize: 10, color: '#8b5cf6', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <div style={{ fontSize: 10, color: s.accent, fontWeight: 700, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           {t.panelHowComputed}
         </div>
-        <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.6 }}>
+        <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text)', lineHeight: 1.65 }}>
           {getExplanation()}
         </p>
       </div>
     </div>
   );
 
+  // ── Node Box ───────────────────────────────────────────────────────────
   return (
     <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
-      {/* Node box */}
       <div
-        onClick={() => setPanelOpen(p => !p)}
+        ref={nodeRef}
+        onClick={handleToggle}
         onMouseEnter={() => { setHovered(true); onHover && onHover(nodeId); }}
         onMouseLeave={() => { setHovered(false); onHover && onHover(null); }}
         style={{
@@ -237,26 +330,31 @@ export default function MerkleNode({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          width: isRoot ? 160 : 120,
-          height: 50,
-          padding: '8px 12px',
-          borderRadius: 12,
-          border: s.border,
-          background: s.bg,
-          boxShadow: active ? s.glow : 'none',
-          transition: 'all 0.25s ease',
-          transform: hovered ? 'scale(1.05) translateY(-2px)' : 'scale(1)',
+          width: isRoot ? 164 : 124,
+          minHeight: 52,
+          padding: '9px 14px',
+          borderRadius: 14,
+          border: `1.5px solid ${isActive ? s.accent : s.accentBorder}`,
+          background: isActive
+            ? s.accentSoft
+            : 'var(--bg2)',
+          boxShadow: isActive ? s.glowActive : s.glow,
+          transition: 'all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          transform: hovered ? 'scale(1.07) translateY(-3px)' : isPanelOpen ? 'scale(1.04) translateY(-2px)' : 'scale(1)',
           cursor: 'pointer',
           backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
           userSelect: 'none',
+          outline: isPanelOpen ? `2px solid ${s.accent}` : 'none',
+          outlineOffset: 2,
         }}
       >
-        {/* Root label */}
+        {/* Root crown label */}
         {isRoot && (
           <span style={{
             fontSize: 7,
-            letterSpacing: '0.18em',
-            color: s.labelColor,
+            letterSpacing: '0.2em',
+            color: s.accent,
             fontFamily: 'monospace',
             textTransform: 'uppercase',
             marginBottom: 2,
@@ -267,35 +365,40 @@ export default function MerkleNode({
           </span>
         )}
 
-        {/* Hash */}
+        {/* Hash text */}
         <span style={{
           fontFamily: 'monospace',
           fontSize: 11,
-          color: s.color,
-          letterSpacing: '0.03em',
+          color: isActive ? s.text : 'var(--text2)',
+          letterSpacing: '0.02em',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           maxWidth: '100%',
+          transition: 'color 0.2s',
         }}>
           {shortHash}
         </span>
 
-        {/* Click indicator dot */}
-        {hovered && !panelOpen && (
+        {/* Pulse dot when hovered + no panel */}
+        {hovered && !isPanelOpen && (
           <div style={{
-            position: 'absolute', bottom: -4, left: '50%',
+            position: 'absolute', bottom: -5, left: '50%',
             transform: 'translateX(-50%)',
-            width: 4, height: 4, borderRadius: '50%',
-            background: s.labelColor,
-            boxShadow: `0 0 6px ${s.labelColor}`,
+            width: 5, height: 5, borderRadius: '50%',
+            background: s.accent,
+            boxShadow: `0 0 8px ${s.accent}`,
             animation: 'dotPulse 1s ease-in-out infinite',
           }} />
         )}
       </div>
 
-      {/* Floating panel */}
-      {panelOpen && <DetailPanel />}
+      {/* Portal panel */}
+      {isPanelOpen && (
+        <DetailPanel anchorRef={nodeRef} onClose={handleClose}>
+          {PanelContent}
+        </DetailPanel>
+      )}
     </div>
   );
 }

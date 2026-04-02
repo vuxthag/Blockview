@@ -5,19 +5,41 @@ import MerkleNode from './MerkleNode';
 /**
  * MerkleTree
  *
- * Renders the tree level by level (levels[0] = root).
- * SVG overlay draws bezier connector paths between parent/child nodes.
- * On node hover, full path-to-root is highlighted (nodes + lines).
+ * Renders a level-by-level Merkle tree with SVG Bezier connectors.
+ * Hover/click highlights the ancestor path from leaf → root.
+ * Connector colors adapt to Light/Dark via CSS variables.
  */
 export default function MerkleTree({ levels, lang = 'vi' }) {
   const t = LANG[lang].merkle;
-  const nodeRefs = useRef({});
-  const containerRef = useRef(null);
-  const [connectors, setConnectors] = useState([]);
-  const [hoveredId, setHoveredId] = useState(null);   // e.g. "2-1"
+  const nodeRefs    = useRef({});
+  const containerRef= useRef(null);
+  const [connectors,     setConnectors]     = useState([]);
+  const [hoveredId,      setHoveredId]      = useState(null);
   const [highlightedIds, setHighlightedIds] = useState(new Set());
+  const [activePanelId,  setActivePanelId]  = useState(null);
 
-  if (!levels || levels.length === 0) return null;
+  // ── Build ancestor set ──────────────────────────────────────────────────
+  const getAncestorIds = useCallback((key) => {
+    const ids = new Set([key]);
+    let [li, ni] = key.split('-').map(Number);
+    while (li > 0) {
+      const parentNi = Math.floor(ni / 2);
+      li -= 1;
+      ni = parentNi;
+      ids.add(`${li}-${ni}`);
+    }
+    return ids;
+  }, []);
+
+  const handleHover = useCallback((nodeId) => setHoveredId(nodeId), []);
+
+  // Recompute highlighted set on hover/panel change
+  useEffect(() => {
+    const activeId = hoveredId || activePanelId;
+    setHighlightedIds(activeId ? getAncestorIds(activeId) : new Set());
+  }, [hoveredId, activePanelId, getAncestorIds]);
+
+  if (!levels || !Array.isArray(levels) || levels.length === 0) return null;
 
   const numLevels = levels.length;
 
@@ -33,25 +55,7 @@ export default function MerkleTree({ levels, lang = 'vi' }) {
     return 'intermediate';
   };
 
-  // Build ancestor path-ids for a given node key "li-ni"
-  const getAncestorIds = useCallback((key) => {
-    const ids = new Set([key]);
-    let [li, ni] = key.split('-').map(Number);
-    while (li > 0) {
-      const parentNi = Math.floor(ni / 2);
-      li -= 1;
-      ni = parentNi;
-      ids.add(`${li}-${ni}`);
-    }
-    return ids;
-  }, []);
-
-  const handleHover = useCallback((nodeId) => {
-    setHoveredId(nodeId);
-    setHighlightedIds(nodeId ? getAncestorIds(nodeId) : new Set());
-  }, [getAncestorIds]);
-
-  // SVG connector measurement
+  // ── SVG connector measurement ───────────────────────────────────────────
   useEffect(() => {
     const measure = () => {
       const container = containerRef.current;
@@ -61,7 +65,7 @@ export default function MerkleTree({ levels, lang = 'vi' }) {
 
       for (let li = 0; li < numLevels - 1; li++) {
         const parentLevel = levels[li];
-        const childLevel = levels[li + 1];
+        const childLevel  = levels[li + 1];
 
         parentLevel.forEach((_, pi) => {
           const pKey = `${li}-${pi}`;
@@ -69,7 +73,7 @@ export default function MerkleTree({ levels, lang = 'vi' }) {
           if (!parentEl) return;
           const pRect = parentEl.getBoundingClientRect();
           const pX = pRect.left + pRect.width / 2 - cRect.left;
-          const pY = pRect.bottom - cRect.top + 2;
+          const pY = pRect.bottom - cRect.top + 3;
 
           [2 * pi, 2 * pi + 1].forEach((ci) => {
             if (ci >= childLevel.length) return;
@@ -78,9 +82,9 @@ export default function MerkleTree({ levels, lang = 'vi' }) {
             if (!childEl) return;
             const cRect2 = childEl.getBoundingClientRect();
             const cX = cRect2.left + cRect2.width / 2 - cRect.left;
-            const cY = cRect2.top - cRect.top - 2;
+            const cY = cRect2.top - cRect.top - 3;
             const midY = (pY + cY) / 2;
-            const d = `M ${pX} ${pY} C ${pX} ${midY + 12}, ${cX} ${midY - 12}, ${cX} ${cY}`;
+            const d = `M ${pX} ${pY} C ${pX} ${midY + 14}, ${cX} ${midY - 14}, ${cX} ${cY}`;
             paths.push({ d, parentKey: pKey, childKey: cKey });
           });
         });
@@ -88,31 +92,31 @@ export default function MerkleTree({ levels, lang = 'vi' }) {
       setConnectors(paths);
     };
 
-    const t = setTimeout(measure, 80);
-    return () => clearTimeout(t);
+    const timer = setTimeout(measure, 80);
+    return () => clearTimeout(timer);
   }, [levels, numLevels]);
 
-  // Decide connector highlight: path is highlighted if both endpoints are in the ancestor chain
   const isPathHighlighted = (parentKey, childKey) => {
-    if (!hoveredId) return false;
+    if (!hoveredId && !activePanelId) return false;
     return highlightedIds.has(parentKey) && highlightedIds.has(childKey);
   };
 
   return (
     <div
       ref={containerRef}
+      onClick={() => setActivePanelId(null)}
       style={{
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 64,            // ← 64px vertical gap between levels (spec: 60–80px)
+        gap: 68,
         width: '100%',
-        paddingBlock: 40,
+        paddingBlock: 44,
         userSelect: 'none',
       }}
     >
-      {/* SVG connector overlay */}
+      {/* ── SVG connector overlay ── */}
       <svg
         style={{
           position: 'absolute',
@@ -125,7 +129,32 @@ export default function MerkleTree({ levels, lang = 'vi' }) {
         }}
       >
         <defs>
-          {/* Glow filter for highlighted paths */}
+          <style>
+            {`
+              @keyframes merkleDashFlow {
+                to { stroke-dashoffset: -100; }
+              }
+              .merkle-line-base {
+                stroke: var(--border);
+                opacity: 0.4;
+                transition: opacity 0.3s;
+              }
+              .merkle-line-idle-flow {
+                stroke: url(#lineGradient);
+                stroke-width: 1.5;
+                opacity: 0.35;
+                stroke-dasharray: 6 12;
+                animation: merkleDashFlow 4s linear infinite;
+              }
+              .merkle-line-active {
+                stroke: url(#lineGradient);
+                stroke-width: 2.5;
+                filter: url(#lineGlow);
+                stroke-dasharray: 8 8;
+                animation: pathPulse 1.8s ease-in-out infinite, merkleDashFlow 1.5s linear infinite;
+              }
+            `}
+          </style>
           <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="3" result="blur" />
             <feMerge>
@@ -133,39 +162,54 @@ export default function MerkleTree({ levels, lang = 'vi' }) {
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#a855f7" stopOpacity="1" />
+            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.8" />
+          </linearGradient>
         </defs>
 
-        {/* Default (dim) lines rendered first */}
+        {/* 1. Base dim lines (solid, faint foundation) */}
         {connectors.map((c, i) => (
           <path
-            key={`dim-${i}`}
+            key={`base-${i}`}
             d={c.d}
-            stroke={isPathHighlighted(c.parentKey, c.childKey) ? 'transparent' : 'rgba(71,85,105,0.35)'}
-            strokeWidth="1.5"
+            className="merkle-line-base"
+            strokeWidth="1.2"
             fill="none"
             strokeLinecap="round"
           />
         ))}
 
-        {/* Highlighted lines rendered on top */}
-        {hoveredId && connectors
+        {/* 2. Idle flowing energy (slow dash along all non-highlighted lines) */}
+        {connectors.map((c, i) => {
+          if (isPathHighlighted(c.parentKey, c.childKey)) return null;
+          return (
+            <path
+              key={`idle-flow-${i}`}
+              d={c.d}
+              className="merkle-line-idle-flow"
+              fill="none"
+              strokeLinecap="round"
+            />
+          );
+        })}
+
+        {/* 3. Highlighted active paths (thick, fast flowing dash + glow) */}
+        {(hoveredId || activePanelId) && connectors
           .filter(c => isPathHighlighted(c.parentKey, c.childKey))
           .map((c, i) => (
             <path
               key={`hi-${i}`}
               d={c.d}
-              stroke="#8b5cf6"
-              strokeWidth="2.5"
+              className="merkle-line-active"
               fill="none"
               strokeLinecap="round"
-              filter="url(#lineGlow)"
-              style={{ animation: 'pathPulse 1.6s ease-in-out infinite' }}
             />
           ))
         }
       </svg>
 
-      {/* Level rows */}
+      {/* ── Level rows ── */}
       {levels.map((levelArray, li) => (
         <div
           key={li}
@@ -173,20 +217,21 @@ export default function MerkleTree({ levels, lang = 'vi' }) {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 10,
+            gap: 12,
             position: 'relative',
-            zIndex: 2,
+            zIndex: 100 - li,
             width: '100%',
           }}
         >
           {/* Level label */}
           <span style={{
             fontSize: 9,
-            letterSpacing: '0.22em',
-            color: '#334155',
+            letterSpacing: '0.24em',
+            color: 'var(--text3)',
             textTransform: 'uppercase',
-            fontFamily: 'monospace',
+            fontFamily: 'var(--mono)',
             fontWeight: 600,
+            transition: 'color 0.2s',
           }}>
             {getLevelLabel(li)}
           </span>
@@ -196,12 +241,12 @@ export default function MerkleTree({ levels, lang = 'vi' }) {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            gap: 20,             // 20px horizontal gap between nodes
+            gap: 20,
             flexWrap: 'nowrap',
           }}>
             {levelArray.map((hash, ni) => {
-              const nodeKey = `${li}-${ni}`;
-              const leftChild = levels[li + 1]?.[2 * ni] ?? null;
+              const nodeKey    = `${li}-${ni}`;
+              const leftChild  = levels[li + 1]?.[2 * ni]     ?? null;
               const rightChild = levels[li + 1]?.[2 * ni + 1] ?? null;
               return (
                 <div
@@ -219,6 +264,11 @@ export default function MerkleTree({ levels, lang = 'vi' }) {
                     isHighlighted={highlightedIds.has(nodeKey)}
                     onHover={handleHover}
                     lang={lang}
+                    panelOpen={activePanelId === nodeKey}
+                    onTogglePanel={(forceState) => {
+                      if (forceState === false) setActivePanelId(null);
+                      else setActivePanelId(prev => prev === nodeKey ? null : nodeKey);
+                    }}
                   />
                 </div>
               );

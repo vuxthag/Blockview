@@ -6,9 +6,11 @@ import HashDemoView from './views/HashDemoView.jsx';
 import MiningView from './views/MiningView.jsx';
 import AboutProjectView from './views/AboutProjectView.jsx';
 import AboutTeamView from './views/AboutTeamView.jsx';
+import RSADemoView from './views/rsa/RSADemoView.jsx';
 import ParticleBackground from './components/ParticleBackground.jsx';
 import Chatbot from './components/Chatbot.jsx';
 import Footer from './components/Footer.jsx';
+import Button from './components/ui/Button.jsx';
 
 function HamburgerIcon() {
   return (
@@ -40,6 +42,7 @@ export default function App() {
     { id: "home",   label: t.nav.home },
     { id: "demo",   label: t.nav.demo },
     { id: "mining", label: t.nav.mining },
+    { id: "rsa",    label: t.nav.rsa },
     { id: "about",  label: t.nav.about },
     { id: "team",   label: t.nav.team },
   ];
@@ -81,13 +84,13 @@ export default function App() {
           </ul>
 
           {/* Lang & Theme toggles */}
-          <div style={{ display: "flex", gap: 6, marginLeft: 8 }}>
-            <button onClick={toggleLang} className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 12, minWidth: 0, borderRadius: 8 }} title={lang === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}>
+          <div className="nav-toggles-container">
+            <Button variant="ghost" size="sm" onClick={toggleLang} className="nav-toggle-btn" title={lang === 'vi' ? 'Switch to English' : 'Chuyển sang Tiếng Việt'}>
               {lang === 'vi' ? '🇬🇧 EN' : '🇻🇳 VI'}
-            </button>
-            <button onClick={toggleTheme} className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 14, minWidth: 0, borderRadius: 8 }} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={toggleTheme} className="nav-toggle-btn" title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
               {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
+            </Button>
           </div>
 
           <button className="nav-hamburger" onClick={() => setMobileOpen(o => !o)} aria-label="Toggle menu">
@@ -101,9 +104,9 @@ export default function App() {
               {tb.label}
             </button>
           ))}
-          <div style={{ display: "flex", gap: 8, padding: "8px 16px" }}>
-            <button onClick={toggleLang} className="btn btn-ghost btn-sm" style={{ fontSize: 12 }}>{lang === 'vi' ? '🇬🇧 English' : '🇻🇳 Tiếng Việt'}</button>
-            <button onClick={toggleTheme} className="btn btn-ghost btn-sm" style={{ fontSize: 12 }}>{theme === 'dark' ? '☀️ Light' : '🌙 Dark'}</button>
+          <div className="nav-mobile-toggles">
+            <Button variant="ghost" size="sm" onClick={toggleLang} className="nav-mobile-toggle-btn">{lang === 'vi' ? '🇬🇧 English' : '🇻🇳 Tiếng Việt'}</Button>
+            <Button variant="ghost" size="sm" onClick={toggleTheme} className="nav-mobile-toggle-btn">{theme === 'dark' ? '☀️ Light' : '🌙 Dark'}</Button>
           </div>
         </div>
       </nav>
@@ -112,6 +115,7 @@ export default function App() {
       {tab === "home"    && <HomeView setTab={switchTab} lang={lang} />}
       {tab === "demo"    && <HashDemoView lang={lang} />}
       {tab === "mining"  && <MiningView lang={lang} />}
+      {tab === "rsa"     && <RSADemoView lang={lang} />}
       {tab === "about"   && <AboutProjectView lang={lang} />}
       {tab === "team"    && <AboutTeamView lang={lang} />}
 

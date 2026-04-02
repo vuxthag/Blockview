@@ -75,19 +75,19 @@ export default function MerkleInputPanel({ onGenerate, loading, lang = 'vi' }) {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: 'rgba(2,6,23,0.7)',
+      background: 'var(--bg-glass)',
       borderRadius: 20,
-      border: '1px solid rgba(51,65,85,0.7)',
+      border: '1px solid var(--border)',
       padding: 20,
       backdropFilter: 'blur(16px)',
-      boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
+      boxShadow: 'var(--shadow)',
     }}>
       {/* Header */}
       <div style={{ marginBottom: 16 }}>
-        <h3 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.2px' }}>
+        <h3 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.2px' }}>
           {t.blockDataTitle}
         </h3>
-        <p style={{ margin: 0, fontSize: 11, color: '#64748b', lineHeight: 1.5 }}>
+        <p style={{ margin: 0, fontSize: 11, color: 'var(--text2)', lineHeight: 1.5 }}>
           {t.blockDataDesc}
         </p>
       </div>
@@ -108,11 +108,11 @@ export default function MerkleInputPanel({ onGenerate, loading, lang = 'vi' }) {
             <div style={{
               width: 22, height: 22, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 9, color: '#475569',
-              fontFamily: 'monospace',
+              fontSize: 9, color: 'var(--text3)',
+              fontFamily: 'var(--mono)',
               borderRadius: '50%',
-              border: '1px solid rgba(71,85,105,0.4)',
-              background: 'rgba(15,23,42,0.6)',
+              border: '1px solid var(--border)',
+              background: 'var(--bg2)',
               userSelect: 'none',
             }}>
               {i + 1}
@@ -127,23 +127,25 @@ export default function MerkleInputPanel({ onGenerate, loading, lang = 'vi' }) {
               style={{
                 flex: 1,
                 height: 40,
-                background: 'rgba(15,23,42,0.6)',
-                border: '1px solid rgba(51,65,85,0.6)',
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border)',
                 borderRadius: 10,
-                color: '#cbd5e1',
+                color: 'var(--text)',
                 fontSize: 12,
                 padding: '0 12px',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--mono)',
                 outline: 'none',
                 transition: 'border-color 0.2s, box-shadow 0.2s',
               }}
               onFocus={e => {
-                e.target.style.borderColor = 'rgba(139,92,246,0.6)';
-                e.target.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.12)';
+                e.target.style.borderColor = 'var(--cyan)';
+                e.target.style.boxShadow = '0 0 0 3px rgba(192,132,252,0.12)';
+                e.target.style.background = 'var(--bg-input-focus)';
               }}
               onBlur={e => {
-                e.target.style.borderColor = 'rgba(51,65,85,0.6)';
+                e.target.style.borderColor = 'var(--border)';
                 e.target.style.boxShadow = 'none';
+                e.target.style.background = 'var(--bg-input)';
               }}
             />
 
@@ -182,10 +184,10 @@ export default function MerkleInputPanel({ onGenerate, loading, lang = 'vi' }) {
           style={{
             marginTop: 4,
             height: 36,
-            background: 'rgba(139,92,246,0.06)',
-            border: '1px dashed rgba(139,92,246,0.3)',
+            background: 'var(--bg2)',
+            border: '1px dashed var(--border2)',
             borderRadius: 10,
-            color: '#8b5cf6',
+            color: 'var(--purple)',
             fontSize: 12,
             cursor: 'pointer',
             width: '100%',
@@ -194,16 +196,16 @@ export default function MerkleInputPanel({ onGenerate, loading, lang = 'vi' }) {
             justifyContent: 'center',
             gap: 6,
             transition: 'all 0.2s',
-            fontFamily: 'monospace',
+            fontFamily: 'var(--mono)',
             fontWeight: 600,
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.background = 'rgba(139,92,246,0.12)';
-            e.currentTarget.style.borderColor = 'rgba(139,92,246,0.5)';
+            e.currentTarget.style.background = 'var(--bg3)';
+            e.currentTarget.style.borderColor = 'var(--cyan)';
           }}
           onMouseLeave={e => {
-            e.currentTarget.style.background = 'rgba(139,92,246,0.06)';
-            e.currentTarget.style.borderColor = 'rgba(139,92,246,0.3)';
+            e.currentTarget.style.background = 'var(--bg2)';
+            e.currentTarget.style.borderColor = 'var(--border2)';
           }}
         >
           {t.addTransaction}
@@ -231,10 +233,10 @@ export default function MerkleInputPanel({ onGenerate, loading, lang = 'vi' }) {
       {/* Tx count info */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: 12, fontSize: 10, color: '#475569',
+        marginBottom: 12, fontSize: 10, color: 'var(--text3)',
       }}>
         <span>{txCountLabel}</span>
-        <span style={{ color: txCount >= 16 ? '#f87171' : '#475569' }}>
+        <span style={{ color: txCount >= 16 ? 'var(--red)' : 'var(--text3)' }}>
           {t.maxTransactions}
         </span>
       </div>

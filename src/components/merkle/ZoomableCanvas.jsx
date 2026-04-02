@@ -1,41 +1,68 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LANG } from '../../data/lang.js';
 
 /**
  * ZoomableCanvas
  *
- * Zoom is controlled ONLY via buttons (+/−/Reset).
- * Mouse-wheel zoom and drag-to-pan are intentionally removed.
- *
- * Zoom levels: 0.75 → 1.0 → 1.25 → 1.5
+ * Supports Zoom via buttons (+/−/Reset) and Pinch-to-Zoom on mobile.
+ * Employs native CSS overflow for 1-finger scrolling/panning.
  */
 
-const ZOOM_STEPS = [0.75, 1, 1.25, 1.5];
-const DEFAULT_STEP = 1; // index into ZOOM_STEPS → 1.0x
+const ZOOM_PRESETS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 export default function ZoomableCanvas({ children, hasContent, lang = 'vi' }) {
   const t = LANG[lang].merkle;
-  const [stepIdx, setStepIdx] = useState(DEFAULT_STEP);
-  const scale = ZOOM_STEPS[stepIdx];
+  const [scale, setScale] = useState(1);
+  const pinchRef = useRef({ startDist: 0, startScale: 1 });
 
   // Reset when new tree is built
   useEffect(() => {
-    if (hasContent) setStepIdx(DEFAULT_STEP);
+    if (hasContent) setScale(1);
   }, [hasContent]);
 
-  const zoomIn  = () => setStepIdx(i => Math.min(ZOOM_STEPS.length - 1, i + 1));
-  const zoomOut = () => setStepIdx(i => Math.max(0, i - 1));
-  const reset   = () => setStepIdx(DEFAULT_STEP);
+  const zoomIn  = () => setScale(s => Math.min(3, s + 0.25));
+  const zoomOut = () => setScale(s => Math.max(0.3, s - 0.25));
+  const reset   = () => setScale(1);
+
+  // ── Pinch to Zoom Handlers ──
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 2 && hasContent) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchRef.current.startDist = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+      pinchRef.current.startScale = scale;
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 2 && hasContent) {
+      // Notice: React passive event warnings may occur if preventDefault is called.
+      // However, touchAction: 'pan-x pan-y' in CSS prevents native zoom nicely.
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const startD = Math.max(1, pinchRef.current.startDist || 1);
+      const newScale = pinchRef.current.startScale * (dist / startD);
+      if (!Number.isNaN(newScale)) {
+        setScale(Math.min(Math.max(0.3, newScale), 3));
+      }
+    }
+  };
 
   return (
-    <div style={{
-      position: 'relative',
-      width: '100%',
-      height: '100%',
-      overflow: 'auto',     // scrollbars appear if content is larger than canvas
-      cursor: 'default',
-      userSelect: 'none',
-    }}>
+    <div 
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        overflow: 'auto',     // scrollbars appear if content is larger than canvas
+        cursor: 'default',
+        userSelect: 'none',
+        touchAction: 'pan-x pan-y', // allows 1-finger scroll, disables native pinch
+      }}
+    >
       {/* ── Transform wrapper ──────────────────────────────── */}
       <div style={{
         display: 'flex',
@@ -49,7 +76,7 @@ export default function ZoomableCanvas({ children, hasContent, lang = 'vi' }) {
           style={{
             transform: `scale(${scale})`,
             transformOrigin: 'top center',
-            transition: 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'transform 100ms cubic-bezier(0.4, 0, 0.2, 1)',
             willChange: 'transform',
           }}
         >
@@ -69,7 +96,7 @@ export default function ZoomableCanvas({ children, hasContent, lang = 'vi' }) {
           <div style={clusterStyle}>
             <CtrlBtn
               onClick={zoomIn}
-              disabled={stepIdx === ZOOM_STEPS.length - 1}
+              disabled={scale >= 3}
               title={t.zoomIn}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -82,7 +109,7 @@ export default function ZoomableCanvas({ children, hasContent, lang = 'vi' }) {
 
             <CtrlBtn
               onClick={zoomOut}
-              disabled={stepIdx === 0}
+              disabled={scale <= 0.3}
               title={t.zoomOut}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -104,21 +131,25 @@ export default function ZoomableCanvas({ children, hasContent, lang = 'vi' }) {
 
           {/* Step indicator */}
           <div style={stepStyle}>
-            {ZOOM_STEPS.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => setStepIdx(i)}
-                title={`${Math.round(s * 100)}%`}
-                style={{
-                  width: i === stepIdx ? 20 : 8,
-                  height: 4, borderRadius: 99,
-                  background: i === stepIdx ? '#8b5cf6' : 'rgba(148,163,184,0.2)',
-                  border: 'none', cursor: 'pointer',
-                  transition: 'all 0.25s ease',
-                  padding: 0, flexShrink: 0,
-                }}
-              />
-            ))}
+            {ZOOM_PRESETS.map((preset, i) => {
+              // Highlight the dot if it's the closest preset
+              const isClosest = Math.abs(scale - preset) < 0.125;
+              return (
+                <button
+                  key={i}
+                  onClick={() => setScale(preset)}
+                  title={`${Math.round(preset * 100)}%`}
+                  style={{
+                    width: isClosest ? 20 : 8,
+                    height: 4, borderRadius: 99,
+                    background: isClosest ? 'var(--cyan)' : 'var(--bg3)',
+                    border: 'none', cursor: 'pointer',
+                    transition: 'all 0.25s ease',
+                    padding: 0, flexShrink: 0,
+                  }}
+                />
+              );
+            })}
           </div>
         </>
       )}
@@ -139,10 +170,10 @@ function CtrlBtn({ children, onClick, title, disabled }) {
       style={{
         width: 32, height: 32,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: hov && !disabled ? 'rgba(139,92,246,0.2)' : 'rgba(2,6,23,0.8)',
-        border: `1px solid ${hov && !disabled ? 'rgba(139,92,246,0.5)' : 'rgba(148,163,184,0.12)'}`,
+        background: hov && !disabled ? 'rgba(192,132,252,0.1)' : 'var(--bg-card)',
+        border: `1px solid ${hov && !disabled ? 'var(--cyan)' : 'var(--border)'}`,
         borderRadius: 8,
-        color: disabled ? '#1e293b' : hov ? '#c084fc' : '#64748b',
+        color: disabled ? 'var(--text3)' : hov ? 'var(--cyan)' : 'var(--text2)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'all 0.15s',
         backdropFilter: 'blur(8px)',
@@ -158,10 +189,10 @@ function CtrlBtn({ children, onClick, title, disabled }) {
 // ── Static style objects ───────────────────────────────────────────────────
 const badgeStyle = {
   position: 'absolute', top: 12, left: 12, zIndex: 10,
-  background: 'rgba(2,6,23,0.75)',
-  border: '1px solid rgba(148,163,184,0.1)',
+  background: 'var(--bg-card)',
+  border: '1px solid var(--border)',
   borderRadius: 8, padding: '4px 10px',
-  fontSize: 11, color: '#475569',
+  fontSize: 11, color: 'var(--text2)',
   fontFamily: 'monospace', letterSpacing: '0.06em',
   pointerEvents: 'none', userSelect: 'none',
   backdropFilter: 'blur(8px)',
@@ -176,8 +207,8 @@ const stepStyle = {
   position: 'absolute', bottom: 14, left: '50%',
   transform: 'translateX(-50%)', zIndex: 10,
   display: 'flex', gap: 4, alignItems: 'center',
-  background: 'rgba(2,6,23,0.6)',
-  border: '1px solid rgba(148,163,184,0.08)',
+  background: 'var(--bg-card)',
+  border: '1px solid var(--border)',
   borderRadius: 99, padding: '6px 10px',
   backdropFilter: 'blur(6px)',
 };
