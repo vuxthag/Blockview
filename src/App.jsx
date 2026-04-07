@@ -5,11 +5,8 @@ import HomeView from './views/HomeView.jsx';
 import HashDemoView from './views/HashDemoView.jsx';
 import MiningView from './views/MiningView.jsx';
 import AboutProjectView from './views/AboutProjectView.jsx';
-import AboutTeamView from './views/AboutTeamView.jsx';
-import RSADemoView from './views/rsa/RSADemoView.jsx';
 import ParticleBackground from './components/ParticleBackground.jsx';
 import Chatbot from './components/Chatbot.jsx';
-import Footer from './components/Footer.jsx';
 import Button from './components/ui/Button.jsx';
 
 function HamburgerIcon() {
@@ -42,9 +39,7 @@ export default function App() {
     { id: "home",   label: t.nav.home },
     { id: "demo",   label: t.nav.demo },
     { id: "mining", label: t.nav.mining },
-    { id: "rsa",    label: t.nav.rsa },
     { id: "about",  label: t.nav.about },
-    { id: "team",   label: t.nav.team },
   ];
 
   useEffect(() => {
@@ -67,10 +62,7 @@ export default function App() {
       <nav className="nav">
         <div className="nav-inner">
           <a className="nav-logo" onClick={() => switchTab("home")} style={{ cursor: "pointer" }}>
-            <img src="/images/logo_hubblock.png" alt="HubBlock" style={{ height: 32, width: 32, borderRadius: 8, objectFit: 'contain' }} />
-            <div>
-              <span className="nav-logo-text">HubBlock</span>
-            </div>
+            <span className="nav-logo-text">BlockView</span>
           </a>
 
           <ul className="nav-links">
@@ -115,12 +107,7 @@ export default function App() {
       {tab === "home"    && <HomeView setTab={switchTab} lang={lang} />}
       {tab === "demo"    && <HashDemoView lang={lang} />}
       {tab === "mining"  && <MiningView lang={lang} />}
-      {tab === "rsa"     && <RSADemoView lang={lang} />}
       {tab === "about"   && <AboutProjectView lang={lang} />}
-      {tab === "team"    && <AboutTeamView lang={lang} />}
-
-      {/* Footer */}
-      <Footer lang={lang} />
 
       {/* AI Chatbot — fixed overlay, receives current language & page */}
       <Chatbot lang={lang} currentPage={tab} />
